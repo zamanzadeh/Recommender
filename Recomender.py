@@ -13,8 +13,9 @@ from sklearn.preprocessing import LabelEncoder
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import StandardScaler
 
-df = pd.read_csv('/home/hadoo/ml-100k/u1.base', sep='\\t', engine='python', names=['UID', 'MID', 'rate', 'time'])
+dataPath = '/users/hadi/documents/projects/gbrs/data/100k/'
 
+df = pd.read_csv(dataPath+'u1.base', sep='\\t', engine='python', names=['UID', 'MID', 'rate', 'time'])
 pairs = []
 grouped = df.groupby(['MID', 'rate'])
 for key, group in grouped:
@@ -32,8 +33,9 @@ for el in edge_list:
 # print G.edges()
 
 #           User Features
-df_user = pd.read_csv('/home/hadoo/ml-100k/u.user', sep='\\|', engine='python',
+df_user = pd.read_csv(dataPath+'u.user', sep='\\|', engine='python',
                       names=['UID', 'age', 'gender', 'job', 'zip'])
+
 
 def convert_categorical(df_X, _X):
     values = np.array(df_X[_X])
@@ -44,20 +46,20 @@ def convert_categorical(df_X, _X):
     onehot_encoder = OneHotEncoder(sparse=False)
     integer_encoded = integer_encoded.reshape(len(integer_encoded), 1)
     onehot_encoded = onehot_encoder.fit_transform(integer_encoded)
-    #print(onehot_encoded)
+    # print(onehot_encoded)
     # invert first example
-    #inverted = label_encoder.inverse_transform([np.argmax(onehot_encoded[0, :])])
-    #print(inverted)
+    # inverted = label_encoder.inverse_transform([np.argmax(onehot_encoded[0, :])])
+    # print(inverted)
     df_X = df_X.drop(_X, 1)
     for j in range(integer_encoded.max() + 1):
-        df_X.insert(loc=j + 1, column=str(_X) + str(j+1), value=onehot_encoded[:, j])
+        df_X.insert(loc=j + 1, column=str(_X) + str(j + 1), value=onehot_encoded[:, j])
     return df_X
 
 
 df_user = convert_categorical(df_user, 'job')
 df_user = convert_categorical(df_user, 'gender')
 
-#define age
+# define age
 df_user['bin'] = pd.cut(df_user['age'], [0, 10, 20, 30, 40, 50, 100], labels=['1', '2', '3', '4', '5', '6'])
 df_user['age'] = df_user['bin']
 df_user = df_user.drop('bin', 1)
@@ -132,7 +134,7 @@ for i in range(1, 50):
     distances.append(ch / dis)
 
 n_clusters_ = np.argmax(distances) + 1
-print "NOC = ", n_clusters_
+print("NOC = ", n_clusters_)
 kmeans = KMeans(n_clusters_, random_state=0).fit(X)
 # print kmeans.labels_
 labels = kmeans.labels_
@@ -144,32 +146,33 @@ for j in range(0, n_clusters_):
     ls = df[df['UID'].isin(usr_cluster[j])]
     cluster_rate.append(ls.groupby('MID')['rate'].mean())
 
+
 def find_similar_movie(crate, mid):
     rec_rate = 1
-    df_item = pd.read_csv('/home/hadoo/ml-100k/u.item', sep='\\|', engine='python',
+    df_item = pd.read_csv(dataPath+'u.item', sep='\\|', engine='python',
                           names=['MID', 'title', 'rdate', 'vdate', 'URL', 'unknown', 'Action', 'Adventure', 'Animation',
                                  'Children', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Fantasy',
                                  'Film-Noir', 'Horror', 'Musical', 'Mystery', 'Romance', 'Sci-Fi', 'Thriller', 'War',
                                  'Western'])
     np_item = np.array(df_item[df_item.columns[5:]])
-    genres, = np.where(np_item[mid-1] == 1)
-    #print "genres", genres
+    genres, = np.where(np_item[mid - 1] == 1)
+    # print "genres", genres
     for kk, vv in crate.iteritems():
         comp_genres, = np.where(np_item[kk - 1] == 1)
         if np.array_equal(genres, comp_genres):
             rec_rate = vv
-            print "rec_rate", rec_rate
+            print("rec_rate", rec_rate)
             return rec_rate
 
     for kk, vv in crate.iteritems():
-       # print kk
+        # print kk
 
         return rec_rate
 
 
 #   test - calculate mse
 s_err = 0
-df_test = pd.read_csv('/home/hadoo/ml-100k/u1.test', sep='\\t', engine='python', names=['UID', 'MID', 'rate', 'time'])
+df_test = pd.read_csv(dataPath+'u1.test', sep='\\t', engine='python', names=['UID', 'MID', 'rate', 'time'])
 for i in range(0, len(df_test)):
     cc = labels[df_test['UID'][i]]
     mm = df_test['MID'][i]
@@ -182,10 +185,10 @@ for i in range(0, len(df_test)):
         try:
             mm = cluster_rate[cc][mm]
         except KeyError:
-            #print "C: ", cc, ", M: ", mm, ", R: ", rr
+            # print "C: ", cc, ", M: ", mm, ", R: ", rr
             predict_rate = find_similar_movie(cluster_rate[cc], mm)
             s_err += pow((predict_rate - rr), 2)
         pass
 
 rmse = math.sqrt(float(s_err / len(df_test)))
-print "RMSE: ",rmse
+print("RMSE: ", rmse)
