@@ -2,8 +2,6 @@ import collections
 import itertools
 import math
 import scipy
-from random import gauss
-import statistics
 
 import networkx as nx
 import numpy as np
@@ -32,22 +30,14 @@ for key, group in grouped:
 # print(pairs)
 
 counter = collections.Counter(pairs)
-alpha = 0.05 * 1682  # param*i_no
+alpha = 0.01 * 1682  # param*i_no
 edge_list = map(list, collections.Counter(el for el in counter.elements() if counter[el] >= alpha).keys())
 
 G = nx.Graph()
 for el in edge_list:
     G.add_edge(el[0], el[1], weight=1)
 # print(G.edges())
-
-options = {
-    'node_color': 'black',
-    'node_size': 5,
-    'line_color': 'grey',
-    'linewidths': 0,
-    'width': 0.1,
-}
-# nx.draw_circular(G, **options)
+# nx.draw(G)
 # plt.show()
 
 #           User Features
@@ -82,7 +72,6 @@ df_user['bin'] = pd.cut(df_user['age'], [0, 10, 20, 30, 40, 50, 100], labels=['1
 df_user['age'] = df_user['bin']
 df_user = df_user.drop('bin', 1)
 df_user = convert_categorical(df_user, 'age')
-print("age: ", df_user['age'])
 
 #           Graph Features
 pr = nx.pagerank(G.to_directed())
@@ -115,10 +104,9 @@ X_train = df_user[df_user.columns[1:]]
 X_train.fillna(0, inplace=True)
 
 ncol = X_train.shape[1]
-print("ncol: ", ncol)
 input_dim = Input(shape=(ncol,))
 # DEFINE THE DIMENSION OF ENCODER ASSUMED 2
-inter_dim = 9
+inter_dim = 16
 encoding_dim = 8
 # DEFINE THE ENCODER LAYER
 encoded = Dense(inter_dim, activation='relu')(input_dim)
@@ -130,15 +118,13 @@ decoded = Dense(ncol, activation='sigmoid')(decoded)
 autoencoder = Model(inputs=input_dim, outputs=decoded)
 # CONFIGURE AND TRAIN THE AUTOENCODER
 autoencoder.compile(optimizer='adadelta', loss='categorical_crossentropy')
-autoencoder.fit(X_train, X_train, epochs=50, batch_size=64, shuffle=False, validation_data=(X_train, X_train))
+autoencoder.fit(X_train, X_train, epochs=10, batch_size=64, shuffle=False, validation_data=(X_train, X_train))
 
 encoder = Model(inputs=input_dim, outputs=encoded)
 Zenc = encoder.predict(X_train)  # bottleneck representation
 
 # Compute input of clustering
 X = StandardScaler().fit_transform(Zenc)
-
-print("Len of X: ", len(X))
 
 # elbow method to find optimal number of clusters in K-means
 wcss = []
@@ -148,9 +134,9 @@ for k in K:
     km = km.fit(X)
     wcss.append(km.inertia_)
 
-# km10 = KMeans(n_clusters=10)
-# km10 = km10.fit(X)
-# y_kmeans = km10.predict(X)
+km10 = KMeans(n_clusters=10)
+km10 = km10.fit(X)
+y_kmeans = km10.predict(X)
 # plt.scatter(X[:, 0], X[:, 1], c=y_kmeans, s=50, cmap='viridis')
 
 # centers = km10.cluster_centers_
@@ -179,7 +165,7 @@ for j in range(0, n_clusters_):
 
 
 def find_similar_movie(crate, mid):
-    rec_rate = []
+    rec_rate = 1
     df_item = pd.read_csv(dataPath+'u.item', sep='\\|', engine='python',
                           names=['MID', 'title', 'rdate', 'vdate', 'URL', 'unknown', 'Action', 'Adventure', 'Animation',
                                  'Children', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Fantasy',
@@ -191,18 +177,14 @@ def find_similar_movie(crate, mid):
     for kk, vv in crate.iteritems():
         comp_genres, = np.where(np_item[kk - 1] == 1)
         if np.array_equal(genres, comp_genres):
-            rec_rate.append(vv)
+            rec_rate = vv
             # print("rec_rate", rec_rate)
-            #return rec_rate
+            return rec_rate
 
-    # print(rec_rate)
-    # for kk, vv in crate.iteritems():
-    #     # print kk
-    #
-    if not rec_rate:
-        return 1
-    else:
-        return statistics.mean(rec_rate)
+    for kk, vv in crate.iteritems():
+        # print kk
+
+        return rec_rate
 
 
 #   test - calculate mse
@@ -213,7 +195,7 @@ for i in range(0, len(df_test)):
     mm = df_test['MID'][i]
     rr = df_test['rate'][i]
     try:
-        predict_rate = round(cluster_rate[cc][mm])
+        predict_rate = cluster_rate[cc][mm]
         # print predict_rate
         s_err += pow((predict_rate - rr), 2)
     except KeyError:
@@ -221,7 +203,7 @@ for i in range(0, len(df_test)):
             mm = cluster_rate[cc][mm]
         except KeyError:
             # print "C: ", cc, ", M: ", mm, ", R: ", rr
-            predict_rate = round(find_similar_movie(cluster_rate[cc], mm))
+            predict_rate = find_similar_movie(cluster_rate[cc], mm)
             s_err += pow((predict_rate - rr), 2)
         pass
 
