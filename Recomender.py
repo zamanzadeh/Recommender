@@ -81,7 +81,7 @@ df_user['bin'] = pd.cut(df_user['age'], [0, 10, 20, 30, 40, 50, 100], labels=['1
 df_user['age'] = df_user['bin']
 df_user = df_user.drop('bin', 1)
 df_user = convert_categorical(df_user, 'age')
-print("age: ", df_user['age'])
+# print("age: ", df_user['age'])
 
 #           Graph Features
 pr = nx.pagerank(G.to_directed())
