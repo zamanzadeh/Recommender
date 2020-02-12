@@ -16,8 +16,7 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn.preprocessing import StandardScaler
 # import matplotlib.pyplot as plt
 
-
-dataPath = '/users/hadi/documents/projects/gbrs/data/100k/'
+dataPath = '/home/hadi/Documents/Projects/datasets/ml-100k/'
 assert (dataPath != ""), "enter a valid data path"
 
 df = pd.read_csv(dataPath+'u1.base', sep='\\t', engine='python', names=['UID', 'MID', 'rate', 'time'])
